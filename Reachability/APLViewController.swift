@@ -47,7 +47,7 @@ class APLViewController: UIViewController {
         /*
         Observe the kNetworkReachabilityChangedNotification. When that notification is posted, the method reachabilityChanged will be called.
         */
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "reachabilityChanged:", name: kReachabilityChangedNotification, object: nil)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(APLViewController.reachabilityChanged(_:)), name: kReachabilityChangedNotification, object: nil)
         
         //Change the host name here to change the server you want to monitor.
         let remoteHostName = "www.apple.com"
