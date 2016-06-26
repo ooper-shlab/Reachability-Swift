@@ -6,7 +6,7 @@
 //
 //
 /*
- Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ Copyright (C) 2016 Apple Inc. All Rights Reserved.
  See LICENSE.txt for this sample’s licensing information
 
  Abstract:
@@ -29,12 +29,8 @@ class APLViewController: UIViewController {
     @IBOutlet private weak var internetConnectionImageView: UIImageView!
     @IBOutlet private weak var internetConnectionStatusField: UITextField!
     
-    @IBOutlet private weak var localWiFiConnectionImageView: UIImageView!
-    @IBOutlet private weak var localWiFiConnectionStatusField: UITextField!
-    
     private var hostReachability: Reachability!
     private var internetReachability: Reachability!
-    private var wifiReachability: Reachability!
     
     
     
@@ -62,9 +58,6 @@ class APLViewController: UIViewController {
         self.internetReachability.startNotifier()
         self.updateInterfaceWithReachability(self.internetReachability)
         
-        self.wifiReachability = Reachability(forLocalWiFi: ())
-        self.wifiReachability.startNotifier()
-        self.updateInterfaceWithReachability(self.wifiReachability)
     }
     
     
@@ -98,9 +91,6 @@ class APLViewController: UIViewController {
             self.configureTextField(self.internetConnectionStatusField, imageView: self.internetConnectionImageView, reachability: reachability)
         }
         
-        if reachability === self.wifiReachability {
-            self.configureTextField(self.localWiFiConnectionStatusField, imageView: self.localWiFiConnectionImageView, reachability: reachability)
-        }
     }
     
     

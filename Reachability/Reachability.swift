@@ -6,7 +6,7 @@
 //
 //
 /*
- Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ Copyright (C) 2016 Apple Inc. All Rights Reserved.
  See LICENSE.txt for this sample’s licensing information
 
  Abstract:
@@ -22,6 +22,9 @@ enum NetworkStatus: Int {
     case ReachableViaWiFi
     case ReachableViaWWAN
 }
+
+//MARK: IPv6 Support
+//Reachability fully support IPv6.  For full details, see ReadMe.md.
 
 
 let kReachabilityChangedNotification = "kNetworkReachabilityChangedNotification"
@@ -62,7 +65,6 @@ private func  ReachabilityCallback(target: SCNetworkReachabilityRef, flags: SCNe
 
 @objc(Reachability)
 class Reachability: NSObject {
-    private var _alwaysReturnLocalWiFiStatus = false //default is NO
     private var _reachabilityRef: SCNetworkReachability?
     
     /*!
@@ -72,7 +74,6 @@ class Reachability: NSObject {
         if let reachability =  SCNetworkReachabilityCreateWithName(nil, hostName) {
             self.init()
             self._reachabilityRef = reachability
-            self._alwaysReturnLocalWiFiStatus = false
         } else {
             return nil
         }
@@ -82,12 +83,11 @@ class Reachability: NSObject {
     /*!
     * Use to check the reachability of a given IP address.
     */
-    convenience init?(address hostAddress: UnsafePointer<sockaddr_in>) {
+    convenience init?(address hostAddress: UnsafePointer<sockaddr>) {
         
-        if let reachability = SCNetworkReachabilityCreateWithAddress(kCFAllocatorDefault, UnsafePointer(hostAddress)) {
+        if let reachability = SCNetworkReachabilityCreateWithAddress(kCFAllocatorDefault, hostAddress) {
             self.init()
             self._reachabilityRef = reachability
-            self._alwaysReturnLocalWiFiStatus = false
         } else {
             return nil
         }
@@ -99,32 +99,19 @@ class Reachability: NSObject {
     * Checks whether the default route is available. Should be used by applications that do not connect to a particular host.
     */
     convenience init?(forInternetConnection: ()) {
-        var zeroAddress = sockaddr_in()
-        bzero(&zeroAddress, sizeofValue(zeroAddress))
-        zeroAddress.sin_len = UInt8(sizeofValue(zeroAddress))
-        zeroAddress.sin_family = sa_family_t(AF_INET)
+        let zeroAddress = UnsafeMutablePointer<sockaddr_in>.alloc(1)
+        bzero(zeroAddress, sizeof(sockaddr_in))
+        zeroAddress.memory.sin_len = UInt8(sizeof(sockaddr_in))
+        zeroAddress.memory.sin_family = sa_family_t(AF_INET)
         
-        self.init(address: &zeroAddress)
+        self.init(address: UnsafePointer(zeroAddress))
+        zeroAddress.dealloc(1)
     }
     
     
-    /*!
-    * Checks whether a local WiFi connection is available.
-    */
-    convenience init?(forLocalWiFi: ()) {
-        var localWifiAddress = sockaddr_in()
-        bzero(&localWifiAddress, sizeofValue(localWifiAddress))
-        localWifiAddress.sin_len = UInt8(sizeofValue(localWifiAddress))
-        localWifiAddress.sin_family = sa_family_t(AF_INET)
-        
-        // IN_LINKLOCALNETNUM is defined in <netinet/in.h> as 169.254.0.0.
-        let IN_LINKLOCALNETNUM: UInt32 = 0xA9_FE_00_00
-        localWifiAddress.sin_addr.s_addr = UInt32(bigEndian: IN_LINKLOCALNETNUM)
-        
-        self.init(address: &localWifiAddress)
-        self._alwaysReturnLocalWiFiStatus = true
-        
-    }
+    //MARK: reachabilityForLocalWiFi
+    //reachabilityForLocalWiFi has been removed from the sample.  See ReadMe.md for more information.
+    //convenience init?(forLocalWiFi: ())
     
     
     //MARK: - Start and stop notifier
@@ -159,18 +146,6 @@ class Reachability: NSObject {
     
     
     //MARK: - Network Flag Handling
-    
-    func localWiFiStatusForFlags(flags: SCNetworkReachabilityFlags) -> NetworkStatus {
-        PrintReachabilityFlags(flags, "localWiFiStatusForFlags")
-        var returnValue = NetworkStatus.NotReachable
-        
-        if flags.contains(.Reachable) && flags.contains(.IsDirect) {
-            returnValue = .ReachableViaWiFi
-        }
-        
-        return returnValue
-    }
-    
     
     func networkStatusForFlags(flags: SCNetworkReachabilityFlags) -> NetworkStatus {
         PrintReachabilityFlags(flags, "networkStatusForFlags")
@@ -233,11 +208,7 @@ class Reachability: NSObject {
         var flags: SCNetworkReachabilityFlags = []
         
         if SCNetworkReachabilityGetFlags(_reachabilityRef!, &flags) {
-            if _alwaysReturnLocalWiFiStatus {
-                returnValue = self.localWiFiStatusForFlags(flags)
-            } else {
-                returnValue = self.networkStatusForFlags(flags)
-            }
+            returnValue = self.networkStatusForFlags(flags)
         }
         
         return returnValue
