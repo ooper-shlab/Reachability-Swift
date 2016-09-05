@@ -18,9 +18,9 @@ import SystemConfiguration
 
 
 enum NetworkStatus: Int {
-    case NotReachable = 0
-    case ReachableViaWiFi
-    case ReachableViaWWAN
+    case notReachable = 0
+    case reachableViaWiFi
+    case reachableViaWWAN
 }
 
 //MARK: IPv6 Support
@@ -31,7 +31,7 @@ let kReachabilityChangedNotification = "kNetworkReachabilityChangedNotification"
 
 
 
-private func PrintReachabilityFlags(flags: SCNetworkReachabilityFlags, _ comment: String) {
+private func PrintReachabilityFlags(_ flags: SCNetworkReachabilityFlags, _ comment: String) {
     #if kShouldPrintReachabilityFlags
         
         NSLog("Reachability Flag Status: %@%@ %@%@%@%@%@%@%@ %@\n",
@@ -51,13 +51,13 @@ private func PrintReachabilityFlags(flags: SCNetworkReachabilityFlags, _ comment
 }
 
 
-private func  ReachabilityCallback(target: SCNetworkReachabilityRef, flags: SCNetworkReachabilityFlags, info: UnsafeMutablePointer<Void>) {
+private func  ReachabilityCallback(_ target: SCNetworkReachability, flags: SCNetworkReachabilityFlags, info: UnsafeMutableRawPointer?) {
     assert(info != nil, "info was NULL in ReachabilityCallback")
-    assert(unsafeBitCast(info, NSObject.self) is Reachability, "info was wrong class in ReachabilityCallback")
+    assert(unsafeBitCast(info, to: NSObject.self) is Reachability, "info was wrong class in ReachabilityCallback")
     
-    let noteObject = unsafeBitCast(info, Reachability.self)
+    let noteObject = unsafeBitCast(info, to: Reachability.self)
     // Post a notification to notify the client that the network reachability changed.
-    NSNotificationCenter.defaultCenter().postNotificationName(kReachabilityChangedNotification, object: noteObject)
+    NotificationCenter.default.post(name: Notification.Name(rawValue: kReachabilityChangedNotification), object: noteObject)
 }
 
 
@@ -65,7 +65,7 @@ private func  ReachabilityCallback(target: SCNetworkReachabilityRef, flags: SCNe
 
 @objc(Reachability)
 class Reachability: NSObject {
-    private var _reachabilityRef: SCNetworkReachability?
+    fileprivate var _reachabilityRef: SCNetworkReachability?
     
     /*!
     * Use to check the reachability of a given host name.
@@ -99,13 +99,13 @@ class Reachability: NSObject {
     * Checks whether the default route is available. Should be used by applications that do not connect to a particular host.
     */
     convenience init?(forInternetConnection: ()) {
-        let zeroAddress = UnsafeMutablePointer<sockaddr_in>.alloc(1)
-        bzero(zeroAddress, sizeof(sockaddr_in))
-        zeroAddress.memory.sin_len = UInt8(sizeof(sockaddr_in))
-        zeroAddress.memory.sin_family = sa_family_t(AF_INET)
+        let zeroAddress = UnsafeMutablePointer<sockaddr_in>.allocate(capacity: 1)
+        bzero(zeroAddress, MemoryLayout<sockaddr_in>.size)
+        zeroAddress.pointee.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        zeroAddress.pointee.sin_family = sa_family_t(AF_INET)
         
-        self.init(address: UnsafePointer(zeroAddress))
-        zeroAddress.dealloc(1)
+        self.init(address: UnsafeRawPointer(zeroAddress).assumingMemoryBound(to: sockaddr.self))
+        zeroAddress.deallocate(capacity: 1)
     }
     
     
@@ -119,12 +119,13 @@ class Reachability: NSObject {
     /*!
     * Start listening for reachability notifications on the current run loop.
     */
+    @discardableResult
     func startNotifier() -> Bool {
         var returnValue: Bool = false
-        var context = SCNetworkReachabilityContext(version: 0, info: UnsafeMutablePointer(unsafeAddressOf(self)), retain: nil, release: nil, copyDescription: nil)
+        var context = SCNetworkReachabilityContext(version: 0, info: Unmanaged.passUnretained(self).toOpaque(), retain: nil, release: nil, copyDescription: nil)
         
         if SCNetworkReachabilitySetCallback(_reachabilityRef!, ReachabilityCallback, &context) {
-            if SCNetworkReachabilityScheduleWithRunLoop(_reachabilityRef!, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode) {
+            if SCNetworkReachabilityScheduleWithRunLoop(_reachabilityRef!, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue) {
                 returnValue = true
             }
         }
@@ -135,7 +136,7 @@ class Reachability: NSObject {
     
     func stopNotifier() {
         if _reachabilityRef != nil {
-            SCNetworkReachabilityUnscheduleFromRunLoop(_reachabilityRef!, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode)
+            SCNetworkReachabilityUnscheduleFromRunLoop(_reachabilityRef!, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)
         }
     }
     
@@ -147,40 +148,40 @@ class Reachability: NSObject {
     
     //MARK: - Network Flag Handling
     
-    func networkStatusForFlags(flags: SCNetworkReachabilityFlags) -> NetworkStatus {
+    func networkStatusForFlags(_ flags: SCNetworkReachabilityFlags) -> NetworkStatus {
         PrintReachabilityFlags(flags, "networkStatusForFlags")
-        if !flags.contains(.Reachable) {
+        if !flags.contains(.reachable) {
             // The target host is not reachable.
-            return .NotReachable
+            return .notReachable
         }
         
-        var returnValue = NetworkStatus.NotReachable
+        var returnValue = NetworkStatus.notReachable
         
-        if !flags.contains(.ConnectionRequired) {
+        if !flags.contains(.connectionRequired) {
             /*
             If the target host is reachable and no connection is required then we'll assume (for now) that you're on Wi-Fi...
             */
-            returnValue = .ReachableViaWiFi
+            returnValue = .reachableViaWiFi
         }
         
-        if flags.contains(.ConnectionOnDemand) || flags.contains(.ConnectionOnTraffic) {
+        if flags.contains(.connectionOnDemand) || flags.contains(.connectionOnTraffic) {
             /*
             ... and the connection is on-demand (or on-traffic) if the calling application is using the CFSocketStream or higher APIs...
             */
             
-            if !flags.contains(.InterventionRequired) {
+            if !flags.contains(.interventionRequired) {
                 /*
                 ... and no [user] intervention is needed...
                 */
-                returnValue = .ReachableViaWiFi
+                returnValue = .reachableViaWiFi
             }
         }
         
-        if flags.contains(.IsWWAN) {
+        if flags.contains(.isWWAN) {
             /*
             ... but WWAN connections are OK if the calling application is using the CFNetwork APIs.
             */
-            returnValue = .ReachableViaWWAN
+            returnValue = .reachableViaWWAN
         }
         
         return returnValue
@@ -195,7 +196,7 @@ class Reachability: NSObject {
         var flags: SCNetworkReachabilityFlags = []
         
         if SCNetworkReachabilityGetFlags(_reachabilityRef!, &flags) {
-            return flags.contains(.ConnectionRequired)
+            return flags.contains(.connectionRequired)
         }
         
         return false
@@ -204,7 +205,7 @@ class Reachability: NSObject {
     
     var currentReachabilityStatus: NetworkStatus {
         assert(_reachabilityRef != nil, "currentNetworkStatus called with NULL SCNetworkReachabilityRef")
-        var returnValue: NetworkStatus = .NotReachable
+        var returnValue: NetworkStatus = .notReachable
         var flags: SCNetworkReachabilityFlags = []
         
         if SCNetworkReachabilityGetFlags(_reachabilityRef!, &flags) {

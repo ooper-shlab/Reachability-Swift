@@ -20,17 +20,17 @@ import UIKit
 class APLViewController: UIViewController {
     
     
-    @IBOutlet private weak var summaryLabel: UILabel!
+    @IBOutlet fileprivate weak var summaryLabel: UILabel!
     
-    @IBOutlet private weak var remoteHostLabel: UITextField!
-    @IBOutlet private weak var remoteHostImageView: UIImageView!
-    @IBOutlet private weak var remoteHostStatusField: UITextField!
+    @IBOutlet fileprivate weak var remoteHostLabel: UITextField!
+    @IBOutlet fileprivate weak var remoteHostImageView: UIImageView!
+    @IBOutlet fileprivate weak var remoteHostStatusField: UITextField!
     
-    @IBOutlet private weak var internetConnectionImageView: UIImageView!
-    @IBOutlet private weak var internetConnectionStatusField: UITextField!
+    @IBOutlet fileprivate weak var internetConnectionImageView: UIImageView!
+    @IBOutlet fileprivate weak var internetConnectionStatusField: UITextField!
     
-    private var hostReachability: Reachability!
-    private var internetReachability: Reachability!
+    fileprivate var hostReachability: Reachability!
+    fileprivate var internetReachability: Reachability!
     
     
     
@@ -38,12 +38,12 @@ class APLViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.summaryLabel.hidden = true
+        self.summaryLabel.isHidden = true
         
         /*
         Observe the kNetworkReachabilityChangedNotification. When that notification is posted, the method reachabilityChanged will be called.
         */
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(APLViewController.reachabilityChanged(_:)), name: kReachabilityChangedNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(APLViewController.reachabilityChanged(_:)), name: NSNotification.Name(rawValue: kReachabilityChangedNotification), object: nil)
         
         //Change the host name here to change the server you want to monitor.
         let remoteHostName = "www.apple.com"
@@ -64,19 +64,19 @@ class APLViewController: UIViewController {
     /*!
     * Called by Reachability whenever status changes.
     */
-    @objc func reachabilityChanged(note: NSNotification) {
+    @objc func reachabilityChanged(_ note: Notification) {
         let curReach = note.object as! Reachability
         self.updateInterfaceWithReachability(curReach)
     }
     
     
-    private func updateInterfaceWithReachability(reachability: Reachability) {
+    fileprivate func updateInterfaceWithReachability(_ reachability: Reachability) {
         if reachability === self.hostReachability {
             self.configureTextField(self.remoteHostStatusField, imageView: self.remoteHostImageView, reachability: reachability)
             let netStatus = reachability.currentReachabilityStatus
             let connectionRequired = reachability.connectionRequired
             
-            self.summaryLabel.hidden = (netStatus != .ReachableViaWWAN)
+            self.summaryLabel.isHidden = (netStatus != .reachableViaWWAN)
             var baseLabelText = ""
             
             if connectionRequired {
@@ -94,13 +94,13 @@ class APLViewController: UIViewController {
     }
     
     
-    private func configureTextField(textField: UITextField, imageView: UIImageView, reachability: Reachability) {
+    fileprivate func configureTextField(_ textField: UITextField, imageView: UIImageView, reachability: Reachability) {
         let netStatus = reachability.currentReachabilityStatus
         var connectionRequired = reachability.connectionRequired
         var statusString = ""
         
         switch netStatus {
-        case .NotReachable:
+        case .notReachable:
             statusString = NSLocalizedString("Access Not Available", comment: "Text field text for access is not available")
             imageView.image = UIImage(named: "stop-32.png")
             /*
@@ -108,10 +108,10 @@ class APLViewController: UIViewController {
             */
             connectionRequired = false
             
-        case .ReachableViaWWAN:
+        case .reachableViaWWAN:
             statusString = NSLocalizedString("Reachable WWAN", comment: "")
             imageView.image = UIImage(named: "WWAN5.png")
-        case .ReachableViaWiFi:
+        case .reachableViaWiFi:
             statusString = NSLocalizedString("Reachable WiFi", comment: "")
             imageView.image = UIImage(named: "Airport.png")
         }
@@ -125,7 +125,7 @@ class APLViewController: UIViewController {
     
     
     deinit {
-        NSNotificationCenter.defaultCenter().removeObserver(self, name: kReachabilityChangedNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name(rawValue: kReachabilityChangedNotification), object: nil)
     }
     
     
