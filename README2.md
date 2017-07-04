@@ -14,7 +14,7 @@ You should not contact to Apple or SHLab(jp) about any faults caused by my trans
 
 ### Build
 
-Xcode 8 beta 6, iOS SDK 10
+Xcode 8.3.3, iOS SDK 10
 
 ### Runtime
 

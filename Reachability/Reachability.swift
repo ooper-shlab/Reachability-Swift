@@ -65,7 +65,7 @@ private func  ReachabilityCallback(_ target: SCNetworkReachability, flags: SCNet
 
 @objc(Reachability)
 class Reachability: NSObject {
-    fileprivate var _reachabilityRef: SCNetworkReachability?
+    private var _reachabilityRef: SCNetworkReachability?
     
     /*!
     * Use to check the reachability of a given host name.

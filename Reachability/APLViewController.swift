@@ -20,17 +20,17 @@ import UIKit
 class APLViewController: UIViewController {
     
     
-    @IBOutlet fileprivate weak var summaryLabel: UILabel!
+    @IBOutlet private weak var summaryLabel: UILabel!
     
-    @IBOutlet fileprivate weak var remoteHostLabel: UITextField!
-    @IBOutlet fileprivate weak var remoteHostImageView: UIImageView!
-    @IBOutlet fileprivate weak var remoteHostStatusField: UITextField!
+    @IBOutlet private weak var remoteHostLabel: UITextField!
+    @IBOutlet private weak var remoteHostImageView: UIImageView!
+    @IBOutlet private weak var remoteHostStatusField: UITextField!
     
-    @IBOutlet fileprivate weak var internetConnectionImageView: UIImageView!
-    @IBOutlet fileprivate weak var internetConnectionStatusField: UITextField!
+    @IBOutlet private weak var internetConnectionImageView: UIImageView!
+    @IBOutlet private weak var internetConnectionStatusField: UITextField!
     
-    fileprivate var hostReachability: Reachability!
-    fileprivate var internetReachability: Reachability!
+    private var hostReachability: Reachability!
+    private var internetReachability: Reachability!
     
     
     
@@ -43,7 +43,7 @@ class APLViewController: UIViewController {
         /*
         Observe the kNetworkReachabilityChangedNotification. When that notification is posted, the method reachabilityChanged will be called.
         */
-        NotificationCenter.default.addObserver(self, selector: #selector(APLViewController.reachabilityChanged(_:)), name: NSNotification.Name(rawValue: kReachabilityChangedNotification), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(APLViewController.reachabilityChanged(_:)), name: Notification.Name(kReachabilityChangedNotification), object: nil)
         
         //Change the host name here to change the server you want to monitor.
         let remoteHostName = "www.apple.com"
@@ -70,7 +70,7 @@ class APLViewController: UIViewController {
     }
     
     
-    fileprivate func updateInterfaceWithReachability(_ reachability: Reachability) {
+    private func updateInterfaceWithReachability(_ reachability: Reachability) {
         if reachability === self.hostReachability {
             self.configureTextField(self.remoteHostStatusField, imageView: self.remoteHostImageView, reachability: reachability)
             let netStatus = reachability.currentReachabilityStatus
@@ -94,7 +94,7 @@ class APLViewController: UIViewController {
     }
     
     
-    fileprivate func configureTextField(_ textField: UITextField, imageView: UIImageView, reachability: Reachability) {
+    private func configureTextField(_ textField: UITextField, imageView: UIImageView, reachability: Reachability) {
         let netStatus = reachability.currentReachabilityStatus
         var connectionRequired = reachability.connectionRequired
         var statusString = ""
@@ -125,7 +125,7 @@ class APLViewController: UIViewController {
     
     
     deinit {
-        NotificationCenter.default.removeObserver(self, name: NSNotification.Name(rawValue: kReachabilityChangedNotification), object: nil)
+        NotificationCenter.default.removeObserver(self, name: Notification.Name(kReachabilityChangedNotification), object: nil)
     }
     
     
